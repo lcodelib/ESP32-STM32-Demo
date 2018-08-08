@@ -2,392 +2,343 @@
 
 static uint8_t esp32_write_buf[MAX_BUF_SIZE];
 
-UART_HandleTypeDef huart2; //ESP32Ä£×é´®¿Ú
-
-UART_HandleTypeDef huart1; //Debug´®¿Ú
-
-uint8_t  USART2_RX_BUF[USART2_MAX_RECV_LEN];
+UART_HandleTypeDef huart2; //ESP32æ¨¡ç»„ä¸²å£
+UART_HandleTypeDef huart1; //Debugä¸²å£
+uint8_t USART2_RX_BUF[USART2_MAX_RECV_LEN];
 
 static void MX_USART2_UART_Init(void);
 
 static void MX_USART1_UART_Init(void);
 
 /* ============================================================
-º¯ÊıÃû£ºesp32_check_ack
-×÷ÓÃ£º¼ì²éÖ´ĞĞ½á¹ûÊÇ·ñÕıÈ·
-ĞÎ²Î£ºĞèÒª¼ì²éµÄÔ¤ÆÚ½á¹û
-·µ»ØÖµ£º·µ»Ø0²»ÎªÔ¤ÆÚ½á¹û£¬·µ»Ø1Îª´ïµ½Ô¤ÆÚ
+å‡½æ•°åï¼šesp32_check_ack
+ä½œç”¨ï¼šæ£€æŸ¥æ‰§è¡Œç»“æœæ˜¯å¦æ­£ç¡®
+å½¢å‚ï¼šéœ€è¦æ£€æŸ¥çš„é¢„æœŸç»“æœ
+è¿”å›å€¼ï¼šè¿”å›0ä¸ä¸ºé¢„æœŸç»“æœï¼Œè¿”å›1ä¸ºè¾¾åˆ°é¢„æœŸ
 =============================================================== */
 
-uint8_t* esp32_check_ack(char *str)
-{
-		char *strx=0;
-		strx=strstr((const char*)USART2_RX_BUF,(const char*)str);
-		return (uint8_t*)strx;
+uint8_t * esp32_check_ack(char * str) {
+	char * strx = 0;
+	strx = strstr((const char * ) USART2_RX_BUF, (const char * ) str);
+	return (uint8_t * ) strx;
 }
 
 /* ============================================================
-º¯ÊıÃû£ºesp32_send_cmd
-×÷ÓÃ£º·¢ËÍATÖ¸Áî²¢·µ»ØÖ´ĞĞ½á¹û
-ĞÎ²Î£º´ı·¢Ö¸Áî£¬Ô¤ÆÚ½á¹û£¬µÈ´ıÊ±¼ä
-·µ»ØÖµ£º·µ»Ø0Îª·¢ËÍÊı¾İ³ö´í£¬·µ»Ø1ÎªÕı³£
+å‡½æ•°åï¼šesp32_send_cmd
+ä½œç”¨ï¼šå‘é€ATæŒ‡ä»¤å¹¶è¿”å›æ‰§è¡Œç»“æœ
+å½¢å‚ï¼šå¾…å‘æŒ‡ä»¤ï¼Œé¢„æœŸç»“æœï¼Œç­‰å¾…æ—¶é—´
+è¿”å›å€¼ï¼šè¿”å›0ä¸ºå‘é€æ•°æ®å‡ºé”™ï¼Œè¿”å›1ä¸ºæ­£å¸¸
 =============================================================== */
 
-int esp32_send_cmd(uint8_t *cmd,char *ack,uint16_t waittime)
-{
-		int res = 0;
-		int len = strlen((const char*)cmd);
-		int acklen = strlen((const char*)ack);
-		memset(USART2_RX_BUF,0,USART2_MAX_RECV_LEN);
-		HAL_UART_Transmit(&huart2,cmd,len,200);
-		HAL_UART_Receive(&huart2,USART2_RX_BUF,USART2_MAX_RECV_LEN,waittime);
-		if(esp32_check_ack(ack))res = 1;
-		return res;
-} 	
+int esp32_send_cmd(uint8_t * cmd, char * ack, uint16_t waittime) {
+	int res = 0;
+	int len = strlen((const char * ) cmd);
+	int acklen = strlen((const char * ) ack);
+	memset(USART2_RX_BUF, 0, USART2_MAX_RECV_LEN);
+	HAL_UART_Transmit( & huart2, cmd, len, 200);
+	HAL_UART_Receive( & huart2, USART2_RX_BUF, USART2_MAX_RECV_LEN, waittime);
+	if (esp32_check_ack(ack)) res = 1;
+	return res;
+}
 
 /* ============================================================
-º¯ÊıÃû£ºesp32_send_data
-×÷ÓÃ£ºµ¥¶À·¢ËÍ´®¿ÚÊı¾İ
-ĞÎ²Î£º´ı·¢Êı¾İ
-·µ»ØÖµ£º·µ»Ø0Îª·¢ËÍÊı¾İ³ö´í£¬·µ»Ø1ÎªÕı³£
+å‡½æ•°åï¼šesp32_send_data
+ä½œç”¨ï¼šå•ç‹¬å‘é€ä¸²å£æ•°æ®
+å½¢å‚ï¼šå¾…å‘æ•°æ®
+è¿”å›å€¼ï¼šè¿”å›0ä¸ºå‘é€æ•°æ®å‡ºé”™ï¼Œè¿”å›1ä¸ºæ­£å¸¸
 =============================================================== */
 
-int esp32_send_data(uint8_t *data)
-{
-		int len = strlen((const char*)data);
-		HAL_UART_Transmit(&huart2, data ,len ,200);
+int esp32_send_data(uint8_t * data) {
+	int len = strlen((const char * ) data);
+	HAL_UART_Transmit( & huart2, data, len, 200);
+	return 1;
+}
+
+/* ============================================================
+å‡½æ•°åï¼šesp32_debug_printf
+ä½œç”¨ï¼šå‘é€ä¸²å£Debugæ•°æ®
+å½¢å‚ï¼šå¾…å‘æ•°æ®
+è¿”å›å€¼ï¼šè¿”å›0ä¸ºå‘é€æ•°æ®å‡ºé”™ï¼Œè¿”å›1ä¸ºæ­£å¸¸
+=============================================================== */
+
+int esp32_debug_printf(char * data) {
+	int len = strlen((const char * ) data);
+	HAL_UART_Transmit( & huart1, (uint8_t * ) data, len, 200);
+	return 1;
+}
+
+/* ============================================================
+å‡½æ•°åï¼šesp32_mod_init()
+ä½œç”¨ï¼šæ£€æµ‹æ¨¡å—æ˜¯å¦åˆå§‹åŒ–å®Œæ¯•
+å½¢å‚ï¼šæ— 
+è¿”å›å€¼ï¼šè¿”å›1è¡¨ç¤ºæ¨¡å—æœªåˆå§‹åŒ–å®Œæˆå¯åŠ¨ï¼Œè¿”å›0ä¸ºå·²å¯åŠ¨
+=============================================================== */
+
+int esp32_mod_init() {
+	char * AT = "AT\r\n";
+	memset(esp32_write_buf, 0, 18);
+	sprintf((char * ) esp32_write_buf, "%s", AT);
+	if (esp32_send_cmd(esp32_write_buf, "OK", 1000)) {
+		esp32_debug_printf("å¯åŠ¨å®Œæˆï¼\r\n");
+		return 0;
+	} else {
+		esp32_debug_printf("æ£€æµ‹å¯åŠ¨ä¸­...\r\n");
 		return 1;
+	}
 }
 
 /* ============================================================
-º¯ÊıÃû£ºesp32_debug_printf
-×÷ÓÃ£º·¢ËÍ´®¿ÚDebugÊı¾İ
-ĞÎ²Î£º´ı·¢Êı¾İ
-·µ»ØÖµ£º·µ»Ø0Îª·¢ËÍÊı¾İ³ö´í£¬·µ»Ø1ÎªÕı³£
+å‡½æ•°åï¼šesp_set_wifi_mode
+ä½œç”¨ï¼šè®¾ç½®WIFIå·¥ä½œæ¨¡å¼
+å½¢å‚ï¼šintå‹ï¼Œä¸ºé€‰æ‹©æ¨¡å¼ï¼Œ0ä¸ºæ— wifiæ¨¡å¼ï¼Œå…³é—­wifiï¼Œ1ä¸ºStationæ¨¡å¼
+2ä¸ºSoftAPæ¨¡å¼ï¼Œ3ä¸ºSoftAP+Stationæ¨¡å¼
+è¿”å›å€¼ï¼šè¿”å›1ä¸ºå‘é€æ•°æ®å‡ºé”™ï¼Œè¿”å›0ä¸ºæ­£å¸¸
 =============================================================== */
 
-int esp32_debug_printf(char *data)
-{
-		int len = strlen((const char*)data);
-		HAL_UART_Transmit(&huart1,(uint8_t*)data ,len ,200);
+int esp_set_wifi_mode(int mode) {
+	char * AT = "AT+CWMODE=";
+	memset(esp32_write_buf, 0, 18);
+	if (mode == 0 || mode == 1 || mode == 2 || mode == 3) {
+		sprintf((char * ) esp32_write_buf, "%s%d%s", AT, mode, "\r\n");
+	} else {
+		esp32_debug_printf("WIFIæ¨¡å¼è®¾ç½®å¤±è´¥ï¼Œå‚æ•°æœ‰è¯¯ï¼\r\n");
 		return 1;
+	}
+	if (esp32_send_cmd(esp32_write_buf, "OK", 1000)) {
+		esp32_debug_printf("WIFIæ¨¡å¼è®¾ç½®æˆåŠŸï¼\r\n");
+		return 0;
+	} else {
+		esp32_debug_printf("WIFIæ¨¡å¼è®¾ç½®å¤±è´¥ï¼\r\n");
+		return 1;
+	}
 }
 
 /* ============================================================
-º¯ÊıÃû£ºesp32_mod_init()
-×÷ÓÃ£º¼ì²âÄ£¿éÊÇ·ñ³õÊ¼»¯Íê±Ï
-ĞÎ²Î£ºÎŞ
-·µ»ØÖµ£º·µ»Ø1±íÊ¾Ä£¿éÎ´³õÊ¼»¯Íê³ÉÆô¶¯£¬·µ»Ø0ÎªÒÑÆô¶¯
+å‡½æ•°åï¼šesp_set_wifi_connect
+ä½œç”¨ï¼šè®¾ç½®WIFIè¿æ¥å‚æ•°
+å½¢å‚ï¼šssidä¸ºç›®æ ‡APçš„SSIDï¼Œpwdä¸ºç›®æ ‡APå¯†ç ï¼Œmacä¸ºç›®æ ‡APç‰©ç†åœ°å€ï¼Œmacenä¸ºæ˜¯å¦åŒºåˆ†macåœ°å€
+è¿”å›å€¼ï¼šè¿”å›1ä¸ºè®¾ç½®å‡ºé”™ï¼Œè¿”å›0ä¸ºæ­£å¸¸
 =============================================================== */
 
-int esp32_mod_init(){
-	  char *AT = "AT\r\n";
-    memset(esp32_write_buf, 0, 18);
-	  sprintf((char*)esp32_write_buf, "%s", AT);
-	  if(esp32_send_cmd(esp32_write_buf, "OK" ,1000)){
-			  esp32_debug_printf("Æô¶¯Íê³É£¡\r\n");
+int esp_set_wifi_connect(char * ssid, char * pwd, char * mac, int macen) {
+	char * AT = "AT+CWJAP=";
+	memset(esp32_write_buf, 0, 64);
+	if (macen) {
+		sprintf((char * ) esp32_write_buf, "%s\"%s\",\"%s\",\"%s\"%s", AT, ssid, pwd, mac, "\r\n");
+	} else {
+		sprintf((char * ) esp32_write_buf, "%s\"%s\",\"%s\"%s", AT, ssid, pwd, "\r\n");
+	}
+	if (esp32_send_cmd(esp32_write_buf, "WIFI CONNECTED", 5000)) {
+		esp32_debug_printf("WIFIè¿æ¥æˆåŠŸï¼\r\n");
+		return 0;
+	} else {
+		esp32_debug_printf("WIFIè¿æ¥å¤±è´¥ï¼\r\n");
+		return 1;
+	}
+}
+
+/* ============================================================
+å‡½æ•°åï¼šesp_set_wifi_disconnect
+ä½œç”¨ï¼šæ–­å¼€ä¸wifiçš„è¿æ¥
+å½¢å‚ï¼šæ— 
+è¿”å›å€¼ï¼šè¿”å›1ä¸ºè®¾ç½®å‡ºé”™ï¼Œè¿”å›0ä¸ºæ­£å¸¸
+=============================================================== */
+
+int esp_set_wifi_disconnect() {
+	char * AT = "AT+CWQAP\r\n";
+	if (esp32_send_cmd((uint8_t * ) AT, "OK", 1000)) {
+		esp32_debug_printf("WIFIå·²æ–­å¼€ï¼\r\n");
+		return 0;
+	} else {
+		esp32_debug_printf("WIFIæ–­å¼€å¤±è´¥ï¼\r\n");
+		return 1;
+	}
+}
+
+/* ============================================================
+å‡½æ•°åï¼šesp_set_wifi_autocon
+ä½œç”¨ï¼šè®¾ç½®wifiæ˜¯å¦ä¸Šç”µè‡ªåŠ¨è¿æ¥
+å½¢å‚ï¼š0ï¼Œä¸Šç”µä¸è‡ªåŠ¨è¿æ¥ã€‚1ï¼Œä¸Šç”µè‡ªåŠ¨è¿æ¥
+è¿”å›å€¼ï¼šè¿”å›1ä¸ºè®¾ç½®å‡ºé”™ï¼Œè¿”å›0ä¸ºæ­£å¸¸
+=============================================================== */
+
+int esp_set_wifi_autocon(int stat) {
+	int res = 0;
+	char * AT = "AT+CWAUTOCONN=";
+	memset(esp32_write_buf, 0, 24);
+	if (stat == 0 || stat == 1) {
+		sprintf((char * ) esp32_write_buf, "%s%d%s", AT, stat, "\r\n");
+	} else {
+		esp32_debug_printf("è‡ªåŠ¨ä¸Šç”µè¿æ¥è®¾ç½®å¤±è´¥ï¼Œå‚æ•°æœ‰è¯¯ï¼\r\n");
+		res = 1;
+	}
+	if (esp32_send_cmd(esp32_write_buf, "OK", 1000)) {
+		esp32_debug_printf("è‡ªåŠ¨ä¸Šç”µè¿æ¥è®¾ç½®æˆåŠŸï¼\r\n");
+	} else {
+		esp32_debug_printf("è‡ªåŠ¨ä¸Šç”µè¿æ¥è®¾ç½®å¤±è´¥ï¼\r\n");
+		res = 1;
+	}
+	return res;
+}
+
+/* ============================================================
+å‡½æ•°åï¼šesp_set_wifi_cipmode
+ä½œç”¨ï¼šè®¾ç½®wifiæ¨¡ç»„ä¼ è¾“æ¨¡å¼
+å½¢å‚ï¼š0ä¸ºæ™®é€šæ¨¡å¼ä¼ è¾“ï¼Œ1ä¸ºé€ä¼ æ¨¡å¼ä¼ è¾“ã€‚
+è¿”å›å€¼ï¼šè¿”å›1ä¸ºè®¾ç½®å‡ºé”™ï¼Œè¿”å›0ä¸ºæ­£å¸¸
+=============================================================== */
+
+int esp_set_wifi_cipmode(int mode) {
+	char * AT = "AT+CIPMODE=";
+	memset(esp32_write_buf, 0, 24);
+	if (mode == 0 || mode == 1) {
+		sprintf((char * ) esp32_write_buf, "%s%d%s", AT, mode, "\r\n");
+	} else {
+		esp32_debug_printf("è®¾ç½®å¤±è´¥ï¼Œå‚æ•°æœ‰è¯¯ï¼\r\n");
+		return 1;
+	}
+	if (esp32_send_cmd(esp32_write_buf, "OK", 1000)) {
+		esp32_debug_printf("ä¼ è¾“æ¨¡å¼è®¾ç½®æˆåŠŸï¼\r\n");
+		return 0;
+	} else {
+		esp32_debug_printf("ä¼ è¾“æ¨¡å¼è®¾ç½®å¤±è´¥ï¼\r\n");
+		return 1;
+	}
+}
+
+/* ============================================================
+å‡½æ•°åï¼šesp_set_wifi_tcp
+ä½œç”¨ï¼šå»ºç«‹ä¸æœåŠ¡å™¨çš„TCPè¿æ¥
+å½¢å‚ï¼š1ï¼ŒæœåŠ¡å™¨IPåœ°å€ã€‚2ï¼Œç«¯å£å·ã€‚
+è¿”å›å€¼ï¼šè¿”å›1ä¸ºè®¾ç½®å‡ºé”™ï¼Œè¿”å›0ä¸ºæ­£å¸¸
+=============================================================== */
+
+int esp_set_wifi_tcp(char * ip, int port) {
+	char * AT = "AT+CIPSTART=\"TCP\",\"";
+	memset(esp32_write_buf, 0, 64);
+	sprintf((char * ) esp32_write_buf, "%s%s%s%d%s", AT, ip, "\",", port, "\r\n");
+	if (esp32_send_cmd(esp32_write_buf, "CONNECT", 1000)) {
+		esp32_debug_printf("TCPè¿æ¥å»ºç«‹æˆåŠŸï¼\r\n");
+		return 0;
+	} else {
+		esp32_debug_printf("TCPè¿æ¥å»ºç«‹å¤±è´¥ï¼\r\n");
+		return 1;
+	}
+}
+
+/* ============================================================
+å‡½æ•°åï¼šesp_set_wifi_tcp
+ä½œç”¨ï¼šé€ä¼ æ¨¡å¼å¼€å…³
+å½¢å‚ï¼š1ä¸ºè¿›å…¥é€ä¼ æ¨¡å¼ï¼Œ0ä¸ºé€€å‡ºé€ä¼ æ¨¡å¼
+è¿”å›å€¼ï¼šè¿”å›1ä¸ºè®¾ç½®å‡ºé”™ï¼Œè¿”å›0ä¸ºæ­£å¸¸
+=============================================================== */
+
+int esp_set_wifi_opmode(int mode) {
+	memset(esp32_write_buf, 0, 24);
+	if (mode == 0 || mode == 1) {
+		if (mode == 1) {
+			sprintf((char * ) esp32_write_buf, "%s", "AT+CIPSEND\r\n");
+			if (esp32_send_cmd(esp32_write_buf, ">", 1000)) {
+				esp32_debug_printf("è¿›å…¥é€ä¼ æ¨¡å¼æˆåŠŸï¼\r\n");
 				return 0;
-		}else{
-			  esp32_debug_printf("¼ì²âÆô¶¯ÖĞ...\r\n");
+			} else {
+				esp32_debug_printf("è¿›å…¥é€ä¼ æ¨¡å¼å¤±è´¥ï¼\r\n");
 				return 1;
+			}
+		} else {
+			sprintf((char * ) esp32_write_buf, "%s", "+++");
+			esp32_send_data(esp32_write_buf);
+			HAL_Delay(1000);
+			esp32_debug_printf("å·²é€€å‡ºé€ä¼ æ¨¡å¼ï¼\r\n");
+			return 0;
 		}
+	} else {
+		esp32_debug_printf("è®¾ç½®å¤±è´¥ï¼Œå‚æ•°æœ‰è¯¯ï¼\r\n");
+		return 1;
+	}
+
 }
 
 /* ============================================================
-º¯ÊıÃû£ºesp_set_wifi_mode
-×÷ÓÃ£ºÉèÖÃWIFI¹¤×÷Ä£Ê½
-ĞÎ²Î£ºintĞÍ£¬ÎªÑ¡ÔñÄ£Ê½£¬0ÎªÎŞwifiÄ£Ê½£¬¹Ø±Õwifi£¬1ÎªStationÄ£Ê½
-2ÎªSoftAPÄ£Ê½£¬3ÎªSoftAP+StationÄ£Ê½
-·µ»ØÖµ£º·µ»Ø1Îª·¢ËÍÊı¾İ³ö´í£¬·µ»Ø0ÎªÕı³£
+å‡½æ•°åï¼šesp_set_wifi_tcp
+ä½œç”¨ï¼šå‘é€TCPæ•°æ®
+å½¢å‚ï¼š1ï¼ŒTCPæ•°æ®ã€‚2ï¼Œé•¿åº¦
+è¿”å›å€¼ï¼šè¿”å›1ä¸ºå‡ºé”™ï¼Œè¿”å›0ä¸ºæ­£å¸¸
 =============================================================== */
 
-int esp_set_wifi_mode(int mode)
-{
-    char *AT = "AT+CWMODE=";
-    memset(esp32_write_buf, 0, 18);
-    if (mode == 0 || mode == 1 || mode == 2 || mode == 3)
-    {
-        sprintf((char*)esp32_write_buf, "%s%d%s", AT, mode, "\r\n");
-    }
-    else
-    { 
-			  esp32_debug_printf("WIFIÄ£Ê½ÉèÖÃÊ§°Ü£¬²ÎÊıÓĞÎó£¡\r\n");
-        return 1;
-    }
-    if(esp32_send_cmd(esp32_write_buf, "OK" ,1000))
-		{      
-			  esp32_debug_printf("WIFIÄ£Ê½ÉèÖÃ³É¹¦£¡\r\n");
-        return 0; 
-    }else
-    {
-			  esp32_debug_printf("WIFIÄ£Ê½ÉèÖÃÊ§°Ü£¡\r\n");
-        return 1;
-    }
-}
-
-/* ============================================================
-º¯ÊıÃû£ºesp_set_wifi_connect
-×÷ÓÃ£ºÉèÖÃWIFIÁ¬½Ó²ÎÊı
-ĞÎ²Î£ºssidÎªÄ¿±êAPµÄSSID£¬pwdÎªÄ¿±êAPÃÜÂë£¬macÎªÄ¿±êAPÎïÀíµØÖ·£¬macenÎªÊÇ·ñÇø·ÖmacµØÖ·
-·µ»ØÖµ£º·µ»Ø1ÎªÉèÖÃ³ö´í£¬·µ»Ø0ÎªÕı³£
-=============================================================== */
-
-int esp_set_wifi_connect(char *ssid,char *pwd, char *mac ,int macen)
-{
-    char *AT = "AT+CWJAP=";
-    memset(esp32_write_buf, 0, 64);
-	  if(macen){
-				sprintf((char*)esp32_write_buf, "%s\"%s\",\"%s\",\"%s\"%s", AT, ssid, pwd, mac, "\r\n");
-		}else
-		{
-				sprintf((char*)esp32_write_buf, "%s\"%s\",\"%s\"%s", AT, ssid, pwd , "\r\n");
+int esp_send_tcp_data(uint8_t * data, int len) {
+	char * AT = "AT+CIPSEND=";
+	memset(esp32_write_buf, 0, 18);
+	sprintf((char * ) esp32_write_buf, "%s%d%s", AT, len, "\r\n");
+	if (esp32_send_cmd(esp32_write_buf, ">", 1000)) {
+		if (esp32_send_data(data)) {
+			esp32_debug_printf("TCPæ•°æ®å·²å‘é€ï¼\r\n");
+			return 0;
+		} else {
+			esp32_debug_printf("TCPæ•°æ®å‘é€å¤±è´¥ï¼\r\n");
+			return 1;
 		}
-    if(esp32_send_cmd(esp32_write_buf, "WIFI CONNECTED" ,5000))
-    {        
-        esp32_debug_printf("WIFIÁ¬½Ó³É¹¦£¡\r\n");
-        return 0;
-    }else                                              
-    {
-			  esp32_debug_printf("WIFIÁ¬½ÓÊ§°Ü£¡\r\n");
-        return 1;
-    }
+	} else {
+		esp32_debug_printf("TCPæ•°æ®å‘é€å¤±è´¥ï¼Œæœªå»ºç«‹å‘é€å‘½ä»¤ï¼\r\n");
+		return 1;
+	}
 }
 
 /* ============================================================
-º¯ÊıÃû£ºesp_set_wifi_disconnect
-×÷ÓÃ£º¶Ï¿ªÓëwifiµÄÁ¬½Ó
-ĞÎ²Î£ºÎŞ
-·µ»ØÖµ£º·µ»Ø1ÎªÉèÖÃ³ö´í£¬·µ»Ø0ÎªÕı³£
+å‡½æ•°åï¼šesp32_init()
+ä½œç”¨ï¼šæ£€æµ‹ï¼Œåˆå§‹åŒ–æ¨¡å—ï¼Œè‹¥å‡ºé”™åˆ™å¾ªç¯æ£€æµ‹ï¼Œè¾“å‡ºdebug
+å½¢å‚ï¼šæ— 
+è¿”å›å€¼ï¼šæ— 
 =============================================================== */
 
-int esp_set_wifi_disconnect()
-{
-    char *AT = "AT+CWQAP\r\n";
-    if(esp32_send_cmd((uint8_t *)AT, "OK" ,1000))
-    {           
-        esp32_debug_printf("WIFIÒÑ¶Ï¿ª£¡\r\n");
-        return 0;
-    }else                                              
-    {
-			  esp32_debug_printf("WIFI¶Ï¿ªÊ§°Ü£¡\r\n");
-        return 1;
-    }
+void esp32_init() {
+	MX_USART2_UART_Init(); //åˆå§‹åŒ–æ¨¡ç»„ä¸²å£
+	MX_USART1_UART_Init(); //åˆå§‹åŒ–Debugä¸²å£
+	while (esp32_mod_init()); //å¾ªç¯æ£€æµ‹æ¨¡å—å¯åŠ¨ï¼ŒATæ˜¯å¦å›å¤OKã€‚
 }
 
 /* ============================================================
-º¯ÊıÃû£ºesp_set_wifi_autocon
-×÷ÓÃ£ºÉèÖÃwifiÊÇ·ñÉÏµç×Ô¶¯Á¬½Ó
-ĞÎ²Î£º0£¬ÉÏµç²»×Ô¶¯Á¬½Ó¡£1£¬ÉÏµç×Ô¶¯Á¬½Ó
-·µ»ØÖµ£º·µ»Ø1ÎªÉèÖÃ³ö´í£¬·µ»Ø0ÎªÕı³£
+å‡½æ•°åï¼šMX_USART2_UART_Init()
+ä½œç”¨ï¼šHALåº“ä¸²å£åˆå§‹åŒ–å‡½æ•°ï¼Œé™æ€å‡½æ•°ï¼Œå†…éƒ¨è°ƒç”¨
+å½¢å‚ï¼šæ— 
+è¿”å›å€¼ï¼šæ— 
 =============================================================== */
 
-int esp_set_wifi_autocon(int stat)
-{
-	  int res = 0;
-    char *AT = "AT+CWAUTOCONN=";
-    memset(esp32_write_buf, 0, 24);
-    if (stat == 0 || stat == 1)
-    {
-        sprintf((char*)esp32_write_buf, "%s%d%s", AT, stat, "\r\n");
-    }
-    else
-    { 
-			  esp32_debug_printf("×Ô¶¯ÉÏµçÁ¬½ÓÉèÖÃÊ§°Ü£¬²ÎÊıÓĞÎó£¡\r\n");
-        res = 1;
-    }
-    if(esp32_send_cmd(esp32_write_buf, "OK" ,1000))
-    {     
-				esp32_debug_printf("×Ô¶¯ÉÏµçÁ¬½ÓÉèÖÃ³É¹¦£¡\r\n");
-    }else                                              
-    {
-			  esp32_debug_printf("×Ô¶¯ÉÏµçÁ¬½ÓÉèÖÃÊ§°Ü£¡\r\n");
-        res = 1;
-    }
-		return res;
-}
+static void MX_USART2_UART_Init(void) {
 
-/* ============================================================
-º¯ÊıÃû£ºesp_set_wifi_cipmode
-×÷ÓÃ£ºÉèÖÃwifiÄ£×é´«ÊäÄ£Ê½
-ĞÎ²Î£º0ÎªÆÕÍ¨Ä£Ê½´«Êä£¬1ÎªÍ¸´«Ä£Ê½´«Êä¡£
-·µ»ØÖµ£º·µ»Ø1ÎªÉèÖÃ³ö´í£¬·µ»Ø0ÎªÕı³£
-=============================================================== */
-
-int esp_set_wifi_cipmode(int mode)
-{
-    char *AT = "AT+CIPMODE=";
-    memset(esp32_write_buf, 0, 24);
-		if (mode == 0 || mode == 1)
-    {
-				sprintf((char*)esp32_write_buf, "%s%d%s", AT, mode, "\r\n");
-		}else
-    { 
-			  esp32_debug_printf("ÉèÖÃÊ§°Ü£¬²ÎÊıÓĞÎó£¡\r\n");
-        return 1;
-    }
-    if(esp32_send_cmd(esp32_write_buf, "OK" ,1000))
-    {     
-			  esp32_debug_printf("´«ÊäÄ£Ê½ÉèÖÃ³É¹¦£¡\r\n");
-        return 0;
-    }else                                              
-    {
-			  esp32_debug_printf("´«ÊäÄ£Ê½ÉèÖÃÊ§°Ü£¡\r\n");
-        return 1;
-    }
-}
-
-/* ============================================================
-º¯ÊıÃû£ºesp_set_wifi_tcp
-×÷ÓÃ£º½¨Á¢Óë·şÎñÆ÷µÄTCPÁ¬½Ó
-ĞÎ²Î£º1£¬·şÎñÆ÷IPµØÖ·¡£2£¬¶Ë¿ÚºÅ¡£
-·µ»ØÖµ£º·µ»Ø1ÎªÉèÖÃ³ö´í£¬·µ»Ø0ÎªÕı³£
-=============================================================== */
-
-int esp_set_wifi_tcp(char* ip,int port)
-{
-    char *AT = "AT+CIPSTART=\"TCP\",\"";
-    memset(esp32_write_buf, 0, 64);
-    sprintf((char*)esp32_write_buf, "%s%s%s%d%s", AT, ip, "\",", port, "\r\n");
-    if(esp32_send_cmd(esp32_write_buf, "CONNECT" ,1000))
-    {     
-			  esp32_debug_printf("TCPÁ¬½Ó½¨Á¢³É¹¦£¡\r\n");
-        return 0;
-    }else                                              
-    {
-			  esp32_debug_printf("TCPÁ¬½Ó½¨Á¢Ê§°Ü£¡\r\n");
-        return 1;
-    }
-}
-
-/* ============================================================
-º¯ÊıÃû£ºesp_set_wifi_tcp
-×÷ÓÃ£ºÍ¸´«Ä£Ê½¿ª¹Ø
-ĞÎ²Î£º1Îª½øÈëÍ¸´«Ä£Ê½£¬0ÎªÍË³öÍ¸´«Ä£Ê½
-·µ»ØÖµ£º·µ»Ø1ÎªÉèÖÃ³ö´í£¬·µ»Ø0ÎªÕı³£
-=============================================================== */
-
-int esp_set_wifi_opmode(int mode)
-{
-    memset(esp32_write_buf, 0, 24);
-		if (mode == 0 || mode == 1)
-    {
-				if(mode == 1)
-				{
-						sprintf((char*)esp32_write_buf, "%s", "AT+CIPSEND\r\n");
-						if(esp32_send_cmd(esp32_write_buf, ">" ,1000))
-						{     
-								esp32_debug_printf("½øÈëÍ¸´«Ä£Ê½³É¹¦£¡\r\n");
-								return 0;
-						}else                                              
-						{
-								esp32_debug_printf("½øÈëÍ¸´«Ä£Ê½Ê§°Ü£¡\r\n");
-								return 1;
-						}
-				}else{
-						sprintf((char*)esp32_write_buf, "%s", "+++");
-						esp32_send_data(esp32_write_buf);
-						HAL_Delay(1000);
-						esp32_debug_printf("ÒÑÍË³öÍ¸´«Ä£Ê½£¡\r\n");
-					  return 0;
-				}
-		}else
-    { 
-			  esp32_debug_printf("ÉèÖÃÊ§°Ü£¬²ÎÊıÓĞÎó£¡\r\n");
-        return 1;
-    }
-   
-}
-
-/* ============================================================
-º¯ÊıÃû£ºesp_set_wifi_tcp
-×÷ÓÃ£º·¢ËÍTCPÊı¾İ
-ĞÎ²Î£º1£¬TCPÊı¾İ¡£2£¬³¤¶È
-·µ»ØÖµ£º·µ»Ø1Îª³ö´í£¬·µ»Ø0ÎªÕı³£
-=============================================================== */
-
-int esp_send_tcp_data(uint8_t *data,int len)
-{
-    char *AT = "AT+CIPSEND=";
-    memset(esp32_write_buf, 0, 18);
-    sprintf((char*)esp32_write_buf, "%s%d%s", AT, len, "\r\n");
-    if(esp32_send_cmd(esp32_write_buf, ">" ,1000))
-    {     
-			  if(esp32_send_data(data))
-				{
-						esp32_debug_printf("TCPÊı¾İÒÑ·¢ËÍ£¡\r\n");
-						return 0;
-				}else{
-						esp32_debug_printf("TCPÊı¾İ·¢ËÍÊ§°Ü£¡\r\n");
-						return 1;
-				}
-    }else                                              
-    {
-				esp32_debug_printf("TCPÊı¾İ·¢ËÍÊ§°Ü£¬Î´½¨Á¢·¢ËÍÃüÁî£¡\r\n");
-				return 1;
-    }
-}
-
-/* ============================================================
-º¯ÊıÃû£ºesp32_init()
-×÷ÓÃ£º¼ì²â£¬³õÊ¼»¯Ä£¿é£¬Èô³ö´íÔòÑ­»·¼ì²â£¬Êä³ödebug
-ĞÎ²Î£ºÎŞ
-·µ»ØÖµ£ºÎŞ
-=============================================================== */
-
-void esp32_init()
-{
-	  MX_USART2_UART_Init(); //³õÊ¼»¯Ä£×é´®¿Ú
-	  MX_USART1_UART_Init(); //³õÊ¼»¯Debug´®¿Ú
-	  while(esp32_mod_init()); //Ñ­»·¼ì²âÄ£¿éÆô¶¯£¬ATÊÇ·ñ»Ø¸´OK¡£
-}
-
-/* ============================================================
-º¯ÊıÃû£ºMX_USART2_UART_Init()
-×÷ÓÃ£ºHAL¿â´®¿Ú³õÊ¼»¯º¯Êı£¬¾²Ì¬º¯Êı£¬ÄÚ²¿µ÷ÓÃ
-ĞÎ²Î£ºÎŞ
-·µ»ØÖµ£ºÎŞ
-=============================================================== */
-
-static void MX_USART2_UART_Init(void)
-{
-
-		huart2.Instance = USART2;
-		huart2.Init.BaudRate = 115200;
-		huart2.Init.WordLength = UART_WORDLENGTH_8B;
-		huart2.Init.StopBits = UART_STOPBITS_1;
-		huart2.Init.Parity = UART_PARITY_NONE;
-		huart2.Init.Mode = UART_MODE_TX_RX;
-		huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-		huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-		if (HAL_UART_Init(&huart2) != HAL_OK)
-		{
-				_Error_Handler(__FILE__, __LINE__);
-		}
+	huart2.Instance = USART2;
+	huart2.Init.BaudRate = 115200;
+	huart2.Init.WordLength = UART_WORDLENGTH_8B;
+	huart2.Init.StopBits = UART_STOPBITS_1;
+	huart2.Init.Parity = UART_PARITY_NONE;
+	huart2.Init.Mode = UART_MODE_TX_RX;
+	huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+	huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+	if (HAL_UART_Init( & huart2) != HAL_OK) {
+		_Error_Handler(__FILE__, __LINE__);
+	}
 
 }
 
 /* ============================================================
-º¯ÊıÃû£ºMX_USART1_UART_Init()
-×÷ÓÃ£ºHAL¿â´®¿Ú³õÊ¼»¯º¯Êı£¬¾²Ì¬º¯Êı£¬ÄÚ²¿µ÷ÓÃ
-ĞÎ²Î£ºÎŞ
-·µ»ØÖµ£ºÎŞ
+å‡½æ•°åï¼šMX_USART1_UART_Init()
+ä½œç”¨ï¼šHALåº“ä¸²å£åˆå§‹åŒ–å‡½æ•°ï¼Œé™æ€å‡½æ•°ï¼Œå†…éƒ¨è°ƒç”¨
+å½¢å‚ï¼šæ— 
+è¿”å›å€¼ï¼šæ— 
 =============================================================== */
 
-static void MX_USART1_UART_Init(void)
-{
+static void MX_USART1_UART_Init(void) {
 
-		huart1.Instance = USART1;
-		huart1.Init.BaudRate = 115200;
-		huart1.Init.WordLength = UART_WORDLENGTH_8B;
-		huart1.Init.StopBits = UART_STOPBITS_1;
-		huart1.Init.Parity = UART_PARITY_NONE;
-		huart1.Init.Mode = UART_MODE_TX_RX;
-		huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-		huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-		if (HAL_UART_Init(&huart1) != HAL_OK)
-		{
-				_Error_Handler(__FILE__, __LINE__);
-		}
+	huart1.Instance = USART1;
+	huart1.Init.BaudRate = 115200;
+	huart1.Init.WordLength = UART_WORDLENGTH_8B;
+	huart1.Init.StopBits = UART_STOPBITS_1;
+	huart1.Init.Parity = UART_PARITY_NONE;
+	huart1.Init.Mode = UART_MODE_TX_RX;
+	huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+	huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+	if (HAL_UART_Init( & huart1) != HAL_OK) {
+		_Error_Handler(__FILE__, __LINE__);
+	}
 
 }
-
